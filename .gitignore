@@ -1,0 +1,448 @@
+0. git相关
+查看自己在哪个repo
+git remote -v
+
+查看branch
+git branch
+
+git status
+
+自动gitignore
+npx gitignore node
+添加变动
+git add .
+
+commit:
+git commit -m "update what"
+
+push:
+git push origin main
+
+
+1. 一级文件
+backend
+client
+database folder
+
+2. package.json
+cd backend
+npm init -y
+-> 有package.json
+
+3. 依赖
+cd backend
+npm i express mysql2 nodemon
+-> 有node_modules, package-lock.json
+
+4. package.json
+"type": "module",                       //使用es6
+
+5. 新建index.js, 引入express, 连portal
+新建可以用touch index.js
+
+import express from 'express'
+const app = express()
+app.listen(8000, () => {
+    console.log('connected to backend')
+})
+
+6. node index.js
+有占用
+lsof -i :8000
+kill -9 <PID>
+
+7. package.json
+"scripts": {
+    "start": "nodemon index.js"         //引入nodemon, 使用npm start
+  },
+
+8. npm start
+
+9. 引入db
+方式1(mysql workbench操作)
+    import mysql from 'mysql2'
+    const db = mysql.createConnection({
+        host: "localhost",
+        user: "root",
+        password: "",
+        database: "test",
+    })
+注意如果放git, user password部分要像方式2一样替换
+
+方式2(放project里): 
+和backend, frontend同级, database folder
+    1. database, schema.sql
+        CREATE DATABASE textbook_exchange
+        USE textbook_exchange
+
+        CREATE TABLE users(
+            user_id INT PRIMARY KEY AUTO_INCREMENT,
+            user_name VARCHAR(100) NOT NULL,
+            google_id VARCHAR(255) UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    run db:
+        1. brew services start mysql
+            成功应该：==> Successfully started `mysql` (label: homebrew.mxcl.mysql)
+        对应, stop:
+        brew services stop mysql
+
+    更改schema后查看:
+        1. exit;
+
+        2. run schema file:
+        mysql -u root -p < schema.sql
+
+        3. connect to MySQL to check tables
+        mysql -u root -p
+        输入密码
+
+        4. select database:
+        USE textbook_exchange;
+        
+        5. check tables:
+        看结构：
+        DESCRIBE listings;
+
+        看数据：
+        SELECT * FROM users;
+        SELECT * FROM books;
+
+        删除数据
+        DELETE FROM books;
+        DELETE FROM books WHERE id = 5;
+
+        删除后id重新开始:
+        ALTER TABLE books AUTO_INCREMENT = 1;
+    2. backend, .env
+    .env(放.gitignore,注意=两边没有空格
+        DB_HOST=localhost
+        DB_USER=root
+        DB_PASSWORD=phm940524
+        DB_NAME=textbook_exchange
+    3. backend, .env
+    .env.example
+        DB_HOST=
+        DB_USER=
+        DB_PASSWORD=
+        DB_NAME=
+    4. cd backend
+    npm install dotenv
+    5. index.js
+    import 'dotenv/config'
+    import mysql from 'mysql2'
+    const db = mysql.createConnection({
+        host: process.env.DB_HOST,  //dotenv module实现process.env
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+    })
+    6. 查看db数据:
+    cd database
+    mysql -u root -p
+    
+    SELECT * FROM users;
+
+10. API
+app.get('/', (req,res) => {
+    res.json('this is the backend')
+})
+在postman测试
+http://localhost:8000
+
+11. 建react folder
+cd client
+npx create-react-app .
+最后的 .是在当前文件夹新建
+npm start
+
+12. 引入router
+cd client
+npm i react-router-dom
+APP.js:
+    import {BrowserRouter, Routes, Route} from "react-router-dom"
+    <BrowserRouter>
+        <Routes>
+            <Route path = '/' element={<Books />} />
+            <Route path = '/add' element={<Add />} />
+            <Route path = '/update/:id' element={<Update />} />
+        </Routes>
+    </BrowserRouter>
+
+13. 建pages
+rafc, use arrow function to create component(more common)
+rfce, use function declaration to create component
+添加到APP.js
+    import Books from './pages/Books';
+    <Route path = '/' element={<Books />} />
+npm start检查各pages
+
+14. 建立前后端交互, axios, cors
+client中
+npm i axios
+backend中      
+npm i cors     //允许调后端接口
+
+15. Books pages
+import axios from 'axios'
+解释：
+    useEffect(()=>{
+        const fetchAllBooks = async() =>{
+            try{
+                const res = await axios.get("http://localhost:8000/books")
+                console.log(res)
+            }catch(err){
+                console.log(err)
+            }
+        }
+        fetchAllBooks()
+    },[])
+    1. useErrect runs once, since []
+    2. fetchALlBookds is executed
+    3. axios.get() function, sentds request
+    4. success/err
+    5. stored in books state, render the data 
+
+关于async, await:
+    1. await, 只能在async中用
+    2. 顺序
+    The async function returns a Promise.
+    Inside the async function, the await keyword pauses the execution until the Promise is resolved.
+    Once resolved, the function continues execution with the resolved value of the Promise.
+    3. 理解
+    const fetchData = async () => {
+        const response = await fetch('https://api.example.com/data'); // Wait for the fetch call
+        const data = await response.json(); // Wait for the JSON parsing
+        return data; // Resolves fetchData() Promise with `data`
+    };
+    const main = async () => {
+        const data = await fetchData(); // Wait for fetchData to resolve
+        console.log(data); // Logs the final parsed data
+    };
+    4. 没有explicit return, 如上
+
+
+16. cd backend, index.js中
+import 
+app.use(cors())
+
+17. Books.jsx, 可以拿到数据
+setBooks(res.data)
+
+在return对数据做处理和展示
+<div className='books'>
+  {books.map((book, index) => {
+      return(
+          <div className='book' key={index}>
+              {book.cover && <img src = {book.cover} alt = "" />}
+              <h2>{book.title}</h2>  
+              <p>{book.desk}</p>
+              <span>{book.price}</span>  
+          </div>     
+      )
+      })}
+</div>
+解释：
+    1. map():
+    apply a call back function to each item in the original array, and create a new array
+    e.g.
+        const number = [1,2,3]
+        console.log(number.map(num => nums * 2))
+    2. callback使用{}, 需要explicit return
+
+18. Books.jsx, 增加link
+<button>
+    <Link to='/add'>Add new book</Link>
+</button>
+
+19. Add.jsx
+const handleChange = (e) =>{setBook(
+    prev=>({...prev, [e.target.name]: e.target.value})
+    )
+}
+解释：
+    1. setBook takes a callback function
+        prep是the previous state of book
+    2. ...prev:
+        spread operator, copies all existing properties of book into new object
+    3. e: event object; 
+    e.target: the HTML element(input) triggered the event
+    e.target.name: the name attribute of the input field
+    e.g.
+        <input name="title" value="Book Title" />
+        e.target.name是title
+    4. [e.target.name]: e.target.value
+    e.target.name: gets the name of the field to update
+    e.target.value: gets the value the user typed in
+
+20. Add.jsx
+    1. return中加button
+    <button onClick={handleClick}>ADD</button> 
+    2. return外加function
+        1. 去掉点击自动刷新
+        const handleClick = e =>{
+            e.preventDefault()}
+        2. 点击调接口, 回主页
+        const navigate = useNavigate()
+        const handleClick = async e =>{
+            e.preventDefault()
+            try{
+                await axios.post("http://localhost:8000/books", book)
+                navigate('/')
+            }catch(err){
+                console.log(err)
+            }
+        }
+
+21. src中, style.css
+App.js中引入 import './style.css'
+
+22. Books.jsx, 加delete, update button
+<button className='delete'>DELETE</button>
+<button className='update'>UPDATE</button>
+
+23. backend, index.js, 增加delete API
+代码：
+app.delete('/books/:id', (req, res) =>{  
+    const bookId = req.params.id
+    const q = "DELETE FROM books WHERE id  = ?"
+    db.query(q, [bookId], (err,data)=>{  
+        if(err) return res.json(err)
+        return res.json('Book has been deleted')
+    })
+})
+解释：
+    1. :id, route parameter, holds a dynamic value
+    2. sql query:
+    const q = "DELETE FROM books WHERE id  = ?"
+    3. db.query(sql, values, callback);
+        1. sql: a sring represents the sql query, use ? as a placeholder for dynamic values
+        2. values: the actual value to replace the ?
+        3. callback: process the result or error after query is executed
+    比如
+        const q = "INSERT INTO books (`title`, `desk`, `cover`) VALUES (?, ?, ?)";
+        const values = ["New Book Title", "Description", "cover.jpg"];
+        db.query(q, values, (err, results) => {
+            if (err) {
+                return res.json(err);
+            }
+            return res.json("Book has been created");
+        });
+
+
+24. Books.js, delete
+<button onClick = {() => {handleDelete(book.id)}} className='delete'>DELETE</button>
+    点击按钮时, call callback function
+    onClick, onSubmit, onMouseOver都是callback function, 因为要Pass arguments to handler
+
+const handleDelete = async(id) =>{
+    try{
+      await axios.delete(`http://localhost:8000/books/${id}`)
+      window.location.reload()
+    }catch(err){
+      console.log(err)
+}}
+
+25. Books.js, update
+<button className='update'>
+    <Link to = {`/update/${book.id}`}>Update</Link>
+</button>
+
+26. Update.jsx复制Add.jsx, 改文案
+
+27. style.css
+
+28. index.js, put接口
+app.put('/books/:id', (req, res) =>{
+    const bookId = req.params.id    
+    const q = "UPDATE books SET `title` = ?, `desk` = ?, `price` = ?, `cover` = ? WHERE id = ?"
+    const values = [
+        req.body.title,
+        req.body.desk,
+        req.body.price,
+        req.body.cover,
+    ]
+    db.query(q, [...values, bookId], (err,data)=>{
+        if(err) return res.json(err)
+        return res.json('Book has been updated')
+    })
+})
+
+29. Update.jsx
+1. useLocation hook, 拿到id
+const location = useLocation()   
+console.log(location.pathname.split('/')[2])
+
+2. 调put接口
+const handleClick = async e =>{
+        e.preventDefault()
+        try{
+          await axios.put(`http://localhost:8000/books/${bookId}`, book)
+          navigate('/')
+        }catch(err){
+            console.log(err)
+        }
+    }
+
+30. tailwind
+npm install -D tailwindcss
+npx tailwindcss init
+
+tailwind.config.js
+content: [
+   "./src/**/*.{js,jsx,ts,tsx}",
+],
+
+./src/index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+npm start
+
+31. daisy
+npm i -D daisyui@latest
+
+tailwind.config.js:
+plugins: [
+    require('daisyui'),
+  ],
+
+
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/build
+/dist
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
